@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     ntrain = int(0.7*len(train_rows))
     
-    model = TrainModel(train_rows[:ntrain], default_rank = 0.7)
+    model = TrainModel(train_rows[:ntrain], default_rank = 0.1)
     
     print EvaluateModel(model, train_rows[ntrain+1:])
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     with open(TEST_DATA_FILE) as thandle:
         csv_gen = csv.DictReader(thandle)
-        with open(OUTFILE) as ohandle:
+        with open(OUTFILE, 'w') as ohandle:
             WritePrediction(rmodel, csv_gen, ohandle)
 
 
