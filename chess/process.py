@@ -1,5 +1,6 @@
 from __future__ import division
 import csv
+from math import sqrt
 from collections import defaultdict
 
 
@@ -27,6 +28,34 @@ class Player():
 
         return max(0, self.rank-bp.rank)
 
+
+def TrainModel(csv_gen):
+    """Trains the model based on receiving a 'csv-generator' from the rows"""
+    pass
+
+
+def EvaluateModel(model_dict, csv_gen):
+    """Performs the model evaluation based on the Kaggle rules"""
+
+    predicted_agg = defaultdict(float)
+    correct_agg = defaultdict(float)
+
+    for row in csv_gen:
+        p1 = int(row["White Player #"])
+        p2 = int(row["Black Player #"])
+        s = float(row["Score"])
+        score = model_dict[p1].get_match_score(model_dict[p2])
+        predicted_agg[(row['Month #'], p1)] += score
+        predicted_agg[(row['Month #'], p2)] += score
+
+        correct_agg[(row['Month #'], p1)] += s
+        correct_agg[(row['Month #'], p2)] += s
+
+    mse = 0.0
+    for key in correct_agg.keys():
+        mse += (predicted_agg[key] - correct_agg[key])**2
+
+    return sqrt(mse)
 
 
 
