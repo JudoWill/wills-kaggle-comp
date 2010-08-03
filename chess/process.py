@@ -31,7 +31,17 @@ class Player():
 
 def TrainModel(csv_gen):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
-    pass
+
+    player_dict = defaultdict(lambda : Player())
+
+    for row in csv_gen:
+        p1 = int(row["White Player #"])
+        p2 = int(row["Black Player #"])
+        s = float(row["Score"])
+
+        player_dict[p1].match(player_dict[p2], s)
+
+    return player_dict
 
 
 def EvaluateModel(model_dict, csv_gen):
@@ -66,15 +76,10 @@ if __name__ == '__main__':
     INIT_DATA_FILE = 'initial-data/training_data.csv'
     TEST_DATA_FILE = 'initial-data/test_data.csv'
 
-    player_dict = defaultdict(lambda : Player())
+
 
     with open(INIT_DATA_FILE) as handle:
-        for row in csv.DictReader(handle):
-            p1 = int(row["White Player #"])
-            p2 = int(row["Black Player #"])
-            s = float(row["Score"])
 
-            player_dict[p1].match(player_dict[p2], s)
 
 
     for key, item in player_dict.items():
