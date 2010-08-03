@@ -81,8 +81,8 @@ if __name__ == '__main__':
     with open(INIT_DATA_FILE) as handle:
         train_rows = list(csv.DictReader(handle))
 
-    ntrain = 0.5*len(train_rows)
-
+    ntrain = int(0.7*len(train_rows))
+    
     model = TrainModel(train_rows[:ntrain])
     
     print EvaluateModel(model, train_rows[ntrain+1:])
