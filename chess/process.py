@@ -13,15 +13,13 @@ class Player():
 
         if score > 0.5 and bp.rank > self.rank:
             #already correct
-            print 'right'
             return
         elif score < 0.5 and self.rank > bp.rank:
             #already correct
-            print 'right'
             return
         else:
+            self.rank = max(self.rank+(score - bp.rank - self.rank)/2, 0)
 
-            self.rank += (bp.rank - self.rank)/2
 
 
     def get_match_score(self, bp):
@@ -45,12 +43,12 @@ if __name__ == '__main__':
         for row in csv.DictReader(handle):
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
-            s = float("Score")
+            s = float(row["Score"])
 
             player_dict[p1].match(player_dict[p2], s)
 
 
-    for key, item in player_dict.itmes():
+    for key, item in player_dict.items():
         print key, item.rank
 
 
