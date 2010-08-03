@@ -79,11 +79,16 @@ if __name__ == '__main__':
 
 
     with open(INIT_DATA_FILE) as handle:
+        train_rows = list(csv.DictReader(handle))
+
+    ntrain = 0.5*len(train_rows)
+
+    model = TrainModel(train_rows[:ntrain])
+    
+    print EvaluateModel(model, train_rows[ntrain+1:])
 
 
 
-    for key, item in player_dict.items():
-        print key, item.rank
 
 
 
