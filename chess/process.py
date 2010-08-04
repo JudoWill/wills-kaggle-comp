@@ -29,10 +29,11 @@ class Player():
         return max(0, self.rank-bp.rank)
 
 
-def TrainModel(csv_gen, default_rank = 0.5):
+def TrainModel(csv_gen, default_rank = 0.5, player_dict = None):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
-    player_dict = defaultdict(lambda : Player(rank = default_rank))
+    if player_dict is None:
+        player_dict = defaultdict(lambda : Player(rank = default_rank))
 
     for row in csv_gen:
         p1 = int(row["White Player #"])
@@ -91,8 +92,8 @@ if __name__ == '__main__':
         train_rows = list(csv.DictReader(handle))
 
     ntrain = int(0.7*len(train_rows))
-    
-    model = TrainModel(train_rows[:ntrain], default_rank = 0.1)
+    model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
+
     
     print EvaluateModel(model, train_rows[ntrain+1:])
 
