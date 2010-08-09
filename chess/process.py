@@ -86,7 +86,7 @@ class PlayerDict():
 		else:
 			return 0
 	
-	def SetRanks(self, num_iter = 1):
+	def SetRanks(self, num_iter = 5):
 		
 		self.ranked_list = self.pdict.values()
 		self.ranked_list.sort(key = attrgetter('rank'))
@@ -106,7 +106,7 @@ class PlayerDict():
 				adj = (it2.rank-it1.rank)/2
 				it2.rank -= adj
 				it1.rank += adj
-				
+			c += 1
 				
 		
 		
@@ -155,7 +155,7 @@ def EvaluateModel(model_dict, csv_gen):
 	for key in correct_agg.keys():
 		mse += (predicted_agg[key] - correct_agg[key])**2
 
-	return sqrt(mse)
+	return sqrt(mse)/len(correct_agg.keys())
 
 def WritePrediction(model_dict, csv_gen, out_handle):
 
