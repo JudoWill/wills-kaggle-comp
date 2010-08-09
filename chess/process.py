@@ -7,25 +7,25 @@ from operator import attrgetter
 
 
 class Player():
-    def __init__(self, pid, rank = 0):
-        self.rank = rank
+	def __init__(self, pid, rank = 0):
+		self.rank = rank
 		self.pid = pid
-        self.wins = list()
-        self.loses = list()
+		self.wins = list()
+		self.loses = list()
 
-    def match(self, bp, score):
-        """Updates the rank based on the rank of Black-Player and the score"""
+	def match(self, bp, score):
+		"""Updates the rank based on the rank of Black-Player and the score"""
 
-        if score > 0 and bp.rank > self.rank:
-            #already correct
-            return
-        elif score < 0 and self.rank > bp.rank:
-            #already correct
-            return
-        else:
-            self.rank = max(self.rank+(score - bp.rank - self.rank)/2, 0)
-        
-        if score < 0:
+		if score > 0 and bp.rank > self.rank:
+			#already correct
+			return
+		elif score < 0 and self.rank > bp.rank:
+			#already correct
+			return
+		else:
+			self.rank = max(self.rank+(score - bp.rank - self.rank)/2, 0)
+		
+		if score < 0:
 			self.wins.append(bp.pid)
 			bp.loses.append(self.pid)
 		elif score > 0:
@@ -109,52 +109,52 @@ class PlayerDict():
 		
 
 def TrainModel(csv_gen, default_rank = 0, player_dict = None):
-    """Trains the model based on receiving a 'csv-generator' from the rows"""
+	"""Trains the model based on receiving a 'csv-generator' from the rows"""
 
-    if player_dict is None:
-        player_dict = PlayerDict(default_rank = default_rank)
+	if player_dict is None:
+		player_dict = PlayerDict(default_rank = default_rank)
 
-    for row in csv_gen:
-        p1 = int(row["White Player #"])
-        p2 = int(row["Black Player #"])
-        s = InTreatScore(float(row["Score"]))
+	for row in csv_gen:
+		p1 = int(row["White Player #"])
+		p2 = int(row["Black Player #"])
+		s = InTreatScore(float(row["Score"]))
 		player_dict.PerformMatch(p1, p2, s)
 
-    return player_dict
+	return player_dict
 
 
 def EvaluateModel(model_dict, csv_gen):
-    """Performs the model evaluation based on the Kaggle rules"""
+	"""Performs the model evaluation based on the Kaggle rules"""
 
-    predicted_agg = defaultdict(float)
-    correct_agg = defaultdict(float)
+	predicted_agg = defaultdict(float)
+	correct_agg = defaultdict(float)
 
-    for row in csv_gen:
-        p1 = int(row["White Player #"])
-        p2 = int(row["Black Player #"])
-        s = float(row["Score"])
-        score = model_dict.GetMatchScore(p1, p2)
-        predicted_agg[(row['Month #'], p1, p2)] += score
-        predicted_agg[(row['Month #'], p2)] += score
+	for row in csv_gen:
+		p1 = int(row["White Player #"])
+		p2 = int(row["Black Player #"])
+		s = float(row["Score"])
+		score = model_dict.GetMatchScore(p1, p2)
+		predicted_agg[(row['Month #'], p1, p2)] += score
+		predicted_agg[(row['Month #'], p2)] += score
 
-        correct_agg[(row['Month #'], p1)] += s
-        correct_agg[(row['Month #'], p2)] += s
+		correct_agg[(row['Month #'], p1)] += s
+		correct_agg[(row['Month #'], p2)] += s
 
-    mse = 0.0
-    for key in correct_agg.keys():
-        mse += (predicted_agg[key] - correct_agg[key])**2
+	mse = 0.0
+	for key in correct_agg.keys():
+		mse += (predicted_agg[key] - correct_agg[key])**2
 
-    return sqrt(mse)
+	return sqrt(mse)
 
 def WritePrediction(model_dict, csv_gen, out_handle):
 
-    out_handle.write('"Month #","White Player #","Black Player #","Score"\n')
-    for row in csv_gen:
-        p1 = int(row["White Player #"])
-        p2 = int(row["Black Player #"])
-        m = row['Month #']
-        score = model_dict[p1].get_match_score(model_dict[p2])
-        out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, OutTreatScore(score)))
+	out_handle.write('"Month #","White Player #","Black Player #","Score"\n')
+	for row in csv_gen:
+		p1 = int(row["White Player #"])
+		p2 = int(row["Black Player #"])
+		m = row['Month #']
+		score = model_dict[p1].get_match_score(model_dict[p2])
+		out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, OutTreatScore(score)))
 
 def InTreatScore(inscore):
 	return (inscore - 0.5)*2
@@ -166,26 +166,26 @@ def OutTreatScore(inscore):
 if __name__ == '__main__':
 
 
-    INIT_DATA_FILE = 'initial-data/training_data.csv'
-    TEST_DATA_FILE = 'initial-data/test_data.csv'
-    OUTFILE = 'results.csv'
+	INIT_DATA_FILE = 'initial-data/training_data.csv'
+	TEST_DATA_FILE = 'initial-data/test_data.csv'
+	OUTFILE = 'results.csv'
 
 
-    with open(INIT_DATA_FILE) as handle:
-        train_rows = list(csv.DictReader(handle))
+	with open(INIT_DATA_FILE) as handle:
+		train_rows = list(csv.DictReader(handle))
 
-    ntrain = int(0.7*len(train_rows))
-    model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
+	ntrain = int(0.7*len(train_rows))
+	model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
 
-    
-    print EvaluateModel(model, train_rows[ntrain+1:])
+	
+	print EvaluateModel(model, train_rows[ntrain+1:])
 
-    rmodel = TrainModel(train_rows)
+	rmodel = TrainModel(train_rows)
 
-    with open(TEST_DATA_FILE) as thandle:
-        csv_gen = csv.DictReader(thandle)
-        with open(OUTFILE, 'w') as ohandle:
-            WritePrediction(rmodel, csv_gen, ohandle)
+	with open(TEST_DATA_FILE) as thandle:
+		csv_gen = csv.DictReader(thandle)
+		with open(OUTFILE, 'w') as ohandle:
+			WritePrediction(rmodel, csv_gen, ohandle)
 
 
 
