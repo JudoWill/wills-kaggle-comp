@@ -60,7 +60,7 @@ class PlayerDict():
 		
 	def PerformMatch(self, wid, bid, score):
 		
-		self[wid].match(self[bid])
+		self[wid].match(self[bid], score)
 		self.match_list += [(wid, bid, score)]
 		
 	def PlayerCmp(self, wplayer, bplayer):
@@ -70,13 +70,21 @@ class PlayerDict():
 		bplayer_wins = len([i for i in bplayer.wins if i == wplayer.pid])
 		wplayer_wins = len([i for i in wplayer.wins if i == bplayer.pid])
 		
-		win_adjust = (bplayer_wins - wplayer_wins)/(bplayer_wins+wplayer_wins)
+		try:
+			win_adjust = (bplayer_wins - wplayer_wins)/(bplayer_wins+wplayer_wins)
+		except ZeroDivisionError:
+			win_adjust = 0
 		value += win_adjust
 		
 		rank_adjust = wplayer.rank - bplayer.rank
 		value += rank_adjust
 		
-		return value
+		if value > 0:
+			return 1
+		elif value < 0:
+			return -1
+		else:
+			return 0
 	
 	def SetRanks(self, num_iter = 1):
 		
@@ -119,7 +127,10 @@ def TrainModel(csv_gen, default_rank = 0, player_dict = None):
 		p2 = int(row["Black Player #"])
 		s = InTreatScore(float(row["Score"]))
 		player_dict.PerformMatch(p1, p2, s)
-
+	
+	player_dict.SetRanks()
+	
+	
 	return player_dict
 
 
@@ -153,8 +164,8 @@ def WritePrediction(model_dict, csv_gen, out_handle):
 		p1 = int(row["White Player #"])
 		p2 = int(row["Black Player #"])
 		m = row['Month #']
-		score = model_dict[p1].get_match_score(model_dict[p2])
-		out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, OutTreatScore(score)))
+		score = model_dict.GetMatchScore(p1, p2)
+		out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, score))
 
 def InTreatScore(inscore):
 	return (inscore - 0.5)*2
