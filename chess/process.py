@@ -178,13 +178,12 @@ def EvaluateModel(model_dict, csv_gen):
             score = model_dict.GetMatchScore(p1, p2, m)
 
 
-        print p1, p2, score, s
         predicted_agg[(m, p1)] += score
         predicted_agg[(m, p2)] += 1-score
 
         correct_agg[(m, p1)] += s
         correct_agg[(m, p2)] += 1-s
-    print predicted_agg
+    
     mse = 0.0
     for key in correct_agg.keys():
         mse += (predicted_agg[key] - correct_agg[key])**2
