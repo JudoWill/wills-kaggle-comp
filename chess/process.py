@@ -4,7 +4,7 @@ from math import sqrt
 from collections import defaultdict
 from operator import attrgetter
 from types import ListType
-import random
+import random, optparse
 
 
 class Player():
@@ -153,9 +153,9 @@ def BayesComb(prior, models, w, b, month):
     val = 0
     model_scores = map(lambda x: x.score, models)
     max_score = sum(model_scores)
-    model_scores = map(lambda x: x/max_score, model_scores)
-    for model, evidence in zip(models, model_scores):
-        val = val*model.GetMatchScore(w,b, month)/evidence
+    props = map(lambda x: x/max_score, model_scores)
+    for model, evidence in zip(models, props):
+        val += model.GetMatchScore(w,b, month)*evidence
     return val
 
 def EvaluateModel(model_dict, csv_gen):
@@ -210,6 +210,13 @@ def OutTreatScore(inscore):
 if __name__ == '__main__':
 
 
+
+    parser = optparse.OptionParser()
+    parser.add_option('-r', '--run', dest = 'run',
+                      action = 'store_true', default = False)
+    (options, args) = parser.parse_args()
+
+
     INIT_DATA_FILE = 'initial-data/training_data.csv'
     TEST_DATA_FILE = 'initial-data/test_data.csv'
     OUTFILE = 'results.csv'
@@ -224,12 +231,13 @@ if __name__ == '__main__':
 
     print 'real val', EvaluateModel(model, train_rows[ntrain+1:])
 
-    rmodel = TrainModel(train_rows)
+    if args.run:
+        rmodel = TrainModel(train_rows)
 
-    with open(TEST_DATA_FILE) as thandle:
-        csv_gen = csv.DictReader(thandle)
-        with open(OUTFILE, 'w') as ohandle:
-            WritePrediction(rmodel, csv_gen, ohandle)
+        with open(TEST_DATA_FILE) as thandle:
+            csv_gen = csv.DictReader(thandle)
+            with open(OUTFILE, 'w') as ohandle:
+                WritePrediction(rmodel, csv_gen, ohandle)
 
 
 
