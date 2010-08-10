@@ -3,7 +3,8 @@ import csv
 from math import sqrt
 from collections import defaultdict
 from operator import attrgetter
-
+from types import ListType
+import random
 
 
 class Player():
@@ -41,6 +42,7 @@ class PlayerDict():
 		self.default_rank = default_rank
 		self.match_list = []
 		self.ranked_list = []
+		self.score = None
 		
 	def __getitem__(self, pid):
 		
@@ -107,36 +109,61 @@ class PlayerDict():
 				it2.rank -= adj
 				it1.rank += adj
 			c += 1
-				
+	
+	def EvaluateModel(self, csv_gen):
 		
-		
-		
-		
+		self.score = EvaluateModel(self, csv_gen)
+		print self.score
 			
-		
+def TrainTestInds(nitems, frac = 0.6):
+	train = []
+	test = []
+	for item in nitems:
+		if random.random() < frac:
+			train.append(item)
+		else:
+			test.append(item)
+	
+	return train, test		
 		
 
-def TrainModel(csv_gen, default_rank = 0, player_dict = None):
+def TrainModel(csv_gen, num_models = 10, default_rank = 0):
 	"""Trains the model based on receiving a 'csv-generator' from the rows"""
 
-	if player_dict is None:
+	model_list = []
+	for i in range(num_models):
+		
 		player_dict = PlayerDict(default_rank = default_rank)
+		train, test = TrainTestInds(csv_gen)
+		for row in train:
+			p1 = int(row["White Player #"])
+			p2 = int(row["Black Player #"])
+			s = InTreatScore(float(row["Score"]))
+			player_dict.PerformMatch(p1, p2, s)
+	
+		player_dict.SetRanks()
+		player_dict.EvaluateModel(test)
+		model_list.append(player_dict)
+	
+	
+	return model_list
 
-	for row in csv_gen:
-		p1 = int(row["White Player #"])
-		p2 = int(row["Black Player #"])
-		s = InTreatScore(float(row["Score"]))
-		player_dict.PerformMatch(p1, p2, s)
-	
-	player_dict.SetRanks()
-	
-	
-	return player_dict
 
+def BayesComb(prior, models, w, b):
+	val = prior
+	model_scores = map(lambda x: x.score, models)
+	max_score = max(model_scores)
+	model_scores = map(lambda x: x/max_score, model_scores)
+	for model, evidence in zip(models, model_scores):
+		val = val*model.GetMatchScore(w,b)/evidence
+	return val
 
 def EvaluateModel(model_dict, csv_gen):
 	"""Performs the model evaluation based on the Kaggle rules"""
+	
 
+	
+	islist = type(model_dict) is ListType
 	predicted_agg = defaultdict(float)
 	correct_agg = defaultdict(float)
 
@@ -144,7 +171,10 @@ def EvaluateModel(model_dict, csv_gen):
 		p1 = int(row["White Player #"])
 		p2 = int(row["Black Player #"])
 		s = float(row["Score"])
-		score = model_dict.GetMatchScore(p1, p2)
+		if islist:
+			score = BayesComb(0.5, model_dict, p1, p2)
+		else:
+			score = model_dict.GetMatchScore(p1, p2)
 		predicted_agg[(row['Month #'], p1, p2)] += score
 		predicted_agg[(row['Month #'], p2)] += score
 
@@ -164,7 +194,7 @@ def WritePrediction(model_dict, csv_gen, out_handle):
 		p1 = int(row["White Player #"])
 		p2 = int(row["Black Player #"])
 		m = row['Month #']
-		score = model_dict.GetMatchScore(p1, p2)
+		score = BayesComb(0.5, model_dict, p1, p2)
 		out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, score))
 
 def InTreatScore(inscore):
@@ -189,7 +219,7 @@ if __name__ == '__main__':
 	model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
 
 	
-	print EvaluateModel(model, train_rows[ntrain+1:])
+	print 'real val', EvaluateModel(model, train_rows[ntrain+1:])
 
 	rmodel = TrainModel(train_rows)
 
