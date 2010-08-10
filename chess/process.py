@@ -197,7 +197,7 @@ def WritePrediction(model_dict, csv_gen, out_handle):
         p1 = int(row["White Player #"])
         p2 = int(row["Black Player #"])
         m = row['Month #']
-        score = BayesComb(0.5, model_dict, p1, p2)
+        score = BayesComb(0.5, model_dict, p1, p2, m)
         out_handle.write('%s,%i,%i,%f\n' % (m, p1, p2, score))
 
 def InTreatScore(inscore):
