@@ -1,10 +1,12 @@
 from __future__ import division
 import csv
 from math import sqrt
-from collections import defaultdict
+from collections import defaultdict, deque
 from operator import attrgetter
 from types import ListType
 import random, optparse
+from itertools import combinations
+from bisect import insort, bisect_left
 
 
 class Player():
@@ -43,6 +45,7 @@ class PlayerDict():
         self.match_list = []
         self.ranked_list = []
         self.score = None
+        self.all_scores = None
 
     def __getitem__(self, pid):
 
@@ -59,6 +62,27 @@ class PlayerDict():
         p2 = self[bid]
 
         return OutTreatScore(p1.rank - p2.rank)
+
+    def GenerateLikelihood(self):
+        print 'generating likelihood!'
+        all_scores = deque()
+        for p1, p2, in combinations(self.pdict.itervalues(), 2):
+            all_scores.append(p1.rank-p2.rank)
+
+
+        self.all_scores = list(all_scores)
+        print 'sorting'
+        self.all_scores.sort()
+
+
+    def GetLikelihood(self, val):
+
+        if self.all_scores is None:
+            self.GenerateLikelihood()
+
+        spot = bisect_left(self.all_scores, val)
+        return spot/len(self.all_scores)
+
 
     def PerformMatch(self, wid, bid, score):
 
@@ -166,13 +190,11 @@ def BayesComb(prior, models, w, b, month, check_vote = True):
 
         models = max(neg_vote, pos_vote)
         
-    val = 0
-    model_scores = map(lambda x: x.score, models)
-    max_score = sum(model_scores)
-    props = map(lambda x: x/max_score, model_scores)
+    val = prior
 
-    for model, evidence in zip(models, props):
-        val += model.GetMatchScore(w,b, month)*evidence
+    for model in models:
+        s = model.GetMatchScore(w,b, month)
+        val = val*s/model.GetLikelihood(s)
     return val
 
 def EvaluateModel(model_dict, csv_gen):
