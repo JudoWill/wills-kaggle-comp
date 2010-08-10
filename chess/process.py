@@ -53,7 +53,7 @@ class PlayerDict():
             self.pdict[pid] = nplayer
             return nplayer
 
-    def GetMatchScore(self, wid, bid):
+    def GetMatchScore(self, wid, bid, month):
 
         p1 = self[wid]
         p2 = self[bid]
@@ -149,13 +149,13 @@ def TrainModel(csv_gen, num_models = 10, default_rank = 0):
     return model_list
 
 
-def BayesComb(prior, models, w, b):
+def BayesComb(prior, models, w, b, month):
     val = 0
     model_scores = map(lambda x: x.score, models)
     max_score = sum(model_scores)
     model_scores = map(lambda x: x/max_score, model_scores)
     for model, evidence in zip(models, model_scores):
-        val = val*model.GetMatchScore(w,b)/evidence
+        val = val*model.GetMatchScore(w,b, month)/evidence
     return val
 
 def EvaluateModel(model_dict, csv_gen):
@@ -171,24 +171,25 @@ def EvaluateModel(model_dict, csv_gen):
         p1 = int(row["White Player #"])
         p2 = int(row["Black Player #"])
         s = float(row["Score"])
+        m = row["Month #"]
         if islist:
-            score = BayesComb(0.5, model_dict, p1, p2)
+            score = BayesComb(0.5, model_dict, p1, p2, m)
         else:
-            score = model_dict.GetMatchScore(p1, p2)
+            score = model_dict.GetMatchScore(p1, p2, m)
 
 
+        print p1, p2, score, s
+        predicted_agg[(m, p1)] += score
+        predicted_agg[(m, p2)] += 1-score
 
-        predicted_agg[(row['Month #'], p1)] += score
-        predicted_agg[(row['Month #'], p2)] += 1-score
-
-        correct_agg[(row['Month #'], p1)] += s
-        correct_agg[(row['Month #'], p2)] += 1-s
-
+        correct_agg[(m, p1)] += s
+        correct_agg[(m, p2)] += 1-s
+    print predicted_agg
     mse = 0.0
     for key in correct_agg.keys():
         mse += (predicted_agg[key] - correct_agg[key])**2
 
-    return sqrt(mse)/len(correct_agg.keys())
+    return sqrt(mse/len(correct_agg.keys()))
 
 def WritePrediction(model_dict, csv_gen, out_handle):
 
