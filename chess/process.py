@@ -127,7 +127,7 @@ def TrainTestInds(nitems, frac = 0.6):
     return train, test
 
 
-def TrainModel(csv_gen, num_models = 10, default_rank = 0):
+def TrainModel(csv_gen, num_models = 4, default_rank = 0):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
     model_list = []
@@ -149,11 +149,28 @@ def TrainModel(csv_gen, num_models = 10, default_rank = 0):
     return model_list
 
 
-def BayesComb(prior, models, w, b, month):
+def BayesComb(prior, models, w, b, month, check_vote = True):
+
+
+
+    if check_vote:
+        pos_vote = []
+        neg_vote = []
+
+        for model in models:
+            score = model.GetMatchScore(w,b, month)
+            if score >= 0.5:
+                pos_vote += [model]
+            elif score < 0.5:
+                neg_vote += [model]
+
+        models = max(neg_vote, pos_vote)
+        
     val = 0
     model_scores = map(lambda x: x.score, models)
     max_score = sum(model_scores)
     props = map(lambda x: x/max_score, model_scores)
+
     for model, evidence in zip(models, props):
         val += model.GetMatchScore(w,b, month)*evidence
     return val
