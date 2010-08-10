@@ -231,7 +231,7 @@ if __name__ == '__main__':
 
     print 'real val', EvaluateModel(model, train_rows[ntrain+1:])
 
-    if args.run:
+    if options.run:
         rmodel = TrainModel(train_rows)
 
         with open(TEST_DATA_FILE) as thandle:
