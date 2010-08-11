@@ -5,8 +5,9 @@ from collections import defaultdict, deque
 from operator import attrgetter
 from types import ListType
 import random, optparse
-from itertools import combinations
+from itertools import combinations, imap
 from bisect import insort, bisect
+import numpy
 
 
 class Player():
@@ -46,6 +47,8 @@ class PlayerDict():
         self.ranked_list = []
         self.score = None
         self.all_scores = None
+        self.bins = None
+        self.tot = None
 
     def __getitem__(self, pid):
 
@@ -64,17 +67,17 @@ class PlayerDict():
         return OutTreatScore(p1.rank - p2.rank)
 
     def GenerateLikelihood(self):
-        print 'generating likelihood!'
-        bin_scores = map(lambda x: x/100, range(100))
-        all_scores = defaultdict(int)
-        for p1, p2, in combinations(self.pdict.itervalues(), 2):
-            spot = bisect(bin_scores, abs(p1.rank-p2.rank))
-            
-            for s in bin_scores[:spot]:
-                all_scores[s] += 1
+
+        def Score():
+            for p1, p2 in combinations(self.pdict.itervalues(), 2):
+                yield abs(p1.rank-p2.rank)
 
 
-        self.all_scores = all_scores
+        bin_scores, self.bins = numpy.histogram(numpy.fromiter(Score(), numpy.float),
+                                                bins = numpy.linspace(0,1,num = 50))
+
+        self.tot = numpy.sum(bin_scores)
+        self.all_scores = bin_scores.cumsum()
 
 
     def GetLikelihood(self, val):
@@ -82,7 +85,9 @@ class PlayerDict():
         if self.all_scores is None:
             self.GenerateLikelihood()
 
-        return self.all_scores[round(abs(val))]
+        spot = numpy.searchsorted(self.bins, val)
+
+        return self.all_scores[spot-1]/self.tot
 
 
     def PerformMatch(self, wid, bid, score):
@@ -268,8 +273,8 @@ if __name__ == '__main__':
     ntrain = int(0.7*len(train_rows))
     model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
 
-
-    print 'real val', EvaluateModel(model, train_rows[ntrain+1:])
+    val =  EvaluateModel(model, train_rows[ntrain+1:])
+    print 'real val ', val 
 
     if options.run:
         rmodel = TrainModel(train_rows)
