@@ -145,7 +145,7 @@ class PlayerDict():
         self.score = EvaluateModel(self, csv_gen)
         print self.score
 
-def TrainTestInds(nitems, frac = 0.6):
+def TrainTestInds(nitems, frac = 0.7):
     train = []
     test = []
     for item in nitems:
@@ -157,7 +157,7 @@ def TrainTestInds(nitems, frac = 0.6):
     return train, test
 
 
-def TrainModel(csv_gen, num_models = 4, default_rank = 0):
+def TrainModel(csv_gen, num_models = 20, default_rank = 0):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
     model_list = []
@@ -173,6 +173,7 @@ def TrainModel(csv_gen, num_models = 4, default_rank = 0):
 
         player_dict.SetRanks()
         player_dict.EvaluateModel(test)
+        player_dict.GenerateLikelihood()
         model_list.append(player_dict)
 
 
@@ -196,12 +197,19 @@ def BayesComb(prior, models, w, b, month, check_vote = True):
 
         models = max(neg_vote, pos_vote)
         
-    val = prior
 
+    scores = []
+    likes = []
     for model in models:
-        s = model.GetMatchScore(w,b, month)
-        val = val*s/model.GetLikelihood(s)
-    return val
+        scores += [model.GetMatchScore(w,b, month)]
+        likes += [model.GetLikelihood(scores[-1])]
+
+    tot = sum(likes)
+    evi = map(lambda x: x/tot, likes)
+    res = sum(map(lambda x,y: x*y, scores, evi))
+
+
+    return res
 
 def EvaluateModel(model_dict, csv_gen):
     """Performs the model evaluation based on the Kaggle rules"""
@@ -270,11 +278,12 @@ if __name__ == '__main__':
     with open(INIT_DATA_FILE) as handle:
         train_rows = list(csv.DictReader(handle))
 
-    ntrain = int(0.7*len(train_rows))
-    model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
+    if not options.run:
+        ntrain = int(0.8*len(train_rows))
+        model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
 
-    val =  EvaluateModel(model, train_rows[ntrain+1:])
-    print 'real val ', val 
+        val =  EvaluateModel(model, train_rows[ntrain+1:])
+        print 'real val ', val
 
     if options.run:
         rmodel = TrainModel(train_rows)
