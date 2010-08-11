@@ -6,7 +6,7 @@ from operator import attrgetter
 from types import ListType
 import random, optparse
 from itertools import combinations
-from bisect import insort, bisect_left
+from bisect import insort, bisect
 
 
 class Player():
@@ -65,14 +65,16 @@ class PlayerDict():
 
     def GenerateLikelihood(self):
         print 'generating likelihood!'
-        all_scores = deque()
+        bin_scores = map(lambda x: x/100, range(100))
+        all_scores = defaultdict(int)
         for p1, p2, in combinations(self.pdict.itervalues(), 2):
-            all_scores.append(p1.rank-p2.rank)
+            spot = bisect(bin_scores, abs(p1.rank-p2.rank))
+            
+            for s in bin_scores[:spot]:
+                all_scores[s] += 1
 
 
-        self.all_scores = list(all_scores)
-        print 'sorting'
-        self.all_scores.sort()
+        self.all_scores = all_scores
 
 
     def GetLikelihood(self, val):
@@ -80,8 +82,7 @@ class PlayerDict():
         if self.all_scores is None:
             self.GenerateLikelihood()
 
-        spot = bisect_left(self.all_scores, val)
-        return spot/len(self.all_scores)
+        return self.all_scores[round(abs(val))]
 
 
     def PerformMatch(self, wid, bid, score):
