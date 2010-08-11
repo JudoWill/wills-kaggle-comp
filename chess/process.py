@@ -173,7 +173,7 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
 
         player_dict.SetRanks()
         player_dict.EvaluateModel(test)
-        player_dict.GenerateLikelihood()
+        #player_dict.GenerateLikelihood()
         model_list.append(player_dict)
 
 
@@ -202,7 +202,7 @@ def BayesComb(prior, models, w, b, month, check_vote = True):
     likes = []
     for model in models:
         scores += [model.GetMatchScore(w,b, month)]
-        likes += [model.GetLikelihood(scores[-1])]
+        likes += [model.score]
 
     tot = sum(likes)
     evi = map(lambda x: x/tot, likes)
