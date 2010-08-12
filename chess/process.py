@@ -296,8 +296,11 @@ def EvaluateModel(model_dict, csv_gen, check_vote = False):
     mse = 0.0
     for key in correct_agg.keys():
         mse += (predicted_agg[key] - correct_agg[key])**2
-
-    return sqrt(mse/len(correct_agg.keys()))
+    try:
+        rmse = sqrt(mse/len(correct_agg.keys()))
+    except sqrt(mse/len(correct_agg.keys())):
+        rmse = 1000
+    return rmse
 
 def WritePrediction(model_dict, csv_gen, out_handle):
 
@@ -364,7 +367,7 @@ if __name__ == '__main__':
         for check_train, check_indiv in product(check_trains, check_indivs):
 
             x = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
-                                      upper = 1, lower = 0,
+                                      upper = 1, lower = 0, maxiter = 10,
                                       args = (fields, train_rows[:ntrain],
                                               train_rows[ntrain+1:],
                                               check_train, check_indiv))
