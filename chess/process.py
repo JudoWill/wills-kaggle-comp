@@ -6,9 +6,8 @@ from operator import attrgetter
 from types import ListType
 import random, optparse
 from itertools import combinations, izip, product, repeat, imap, chain
-from multiprocessing import Pool
-from bisect import insort, bisect
 import numpy
+import scipy.optimize
 
 
 class Player():
@@ -316,14 +315,13 @@ def InTreatScore(inscore):
 def OutTreatScore(inscore):
     return (inscore/2)+0.5
 
-def Linker(input):
-    group, fields, train_rows, test_rows = input
-    pdict = dict(zip(chain.from_iterable(fields), group))
+def ObjFun(xtest, fields, train_rows, test_rows, check_train, check_indiv):
+    pdict = dict(zip(fields, list(iter(xtest)) + [check_train, check_indiv]))
 
-    rmodel = TrainModel(chain.from_iterable(train_rows), **pdict)
-    val = EvaluateModel(rmodel, chain.from_iterable(test_rows))
+    rmodel = TrainModel(train_rows, **pdict)
+    val = EvaluateModel(rmodel, test_rows)
 
-    return pdict, val
+    return val
 
     
 if __name__ == '__main__':
@@ -357,20 +355,22 @@ if __name__ == '__main__':
     if options.optimize or options.run:
         fields = ('default_rank', 'seed_frac', 'rep_frac',
                   'check_train', 'check_indiv')
-        default_ranks = map(lambda x: x/10, range(10))
-        seed_fracs = map(lambda x: x/10, range(1,8))
-        rep_fracs = map(lambda x: x/10, range(1,8))
+
         check_trains = (True, False)
         check_indivs = (True, False)
         bval = 100
-        pool = Pool(processes = 3)
-        group_gen = product(default_ranks, seed_fracs, rep_fracs,
-                            check_trains, check_indivs)
-        map_iter = izip(group_gen, repeat((fields,)),
-                        repeat((train_rows[:ntrain],)),
-                        repeat((train_rows[ntrain+1:],)))
-        for pdict, val in pool.imap(Linker, map_iter, chunksize = 10):
 
+        ieqcons = [lambda x: x[0], lambda x: x[1], lambda x: x[2],
+                   lambda x: 1-x[0], lambda x: 1-x[1], lambda x: 1-x[2], ]
+        for check_train, check_indiv in product(check_trains, check_indivs):
+
+            x, val, its, lmode, smode = scipy.optimize.fmin_slsqp(ObjFun,
+                                            [0.5, 0.5, 0.5], ieqcons = ieqcons,
+                                            args = (fields, train_rows[:ntrain],
+                                                    train_rows[ntrain+1:],
+                                                    check_train, check_indiv),
+                                            full_output = True, iprint = 2)
+            pdict = dict(zip(fields, x + [check_train, check_indiv]))
             if val < bval:
                 best_dict = pdict
                 bval = val
