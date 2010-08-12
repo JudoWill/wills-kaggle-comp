@@ -353,6 +353,7 @@ if __name__ == '__main__':
         val =  EvaluateModel(model, train_rows[ntrain+1:])
         print 'real val ', val
 
+    best_dict = {}
     if options.optimize or options.run:
         fields = ('default_rank', 'seed_frac', 'rep_frac',
                   'check_train', 'check_indiv')
@@ -362,19 +363,19 @@ if __name__ == '__main__':
         check_trains = (True, False)
         check_indivs = (True, False)
         bval = 100
-        pool = Pool(processes = 2)
+        pool = Pool(processes = 3)
         group_gen = product(default_ranks, seed_fracs, rep_fracs,
                             check_trains, check_indivs)
         map_iter = izip(group_gen, repeat((fields,)),
                         repeat((train_rows[:ntrain],)),
                         repeat((train_rows[ntrain+1:],)))
-        for pdict, val in pool.imap(Linker, map_iter, chunksize = 5):
+        for pdict, val in pool.imap(Linker, map_iter, chunksize = 10):
 
-            print 'checked', pdict         
-            print 'real val ', val
             if val < bval:
                 best_dict = pdict
                 bval = val
+                print 'checked', pdict
+                print 'real val ', val
 
 
     if options.run:
