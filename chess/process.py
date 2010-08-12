@@ -163,12 +163,37 @@ def TrainTestInds(nitems, frac = 0.7):
 def TrainModel(csv_gen, num_models = 20, default_rank = 0):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
+    def WeightMatches(models, csv_gen):
+	    for row in csv_gen:
+		    p1 = int(row["White Player #"])
+	        p2 = int(row["Black Player #"])
+	        s = float(row["Score"])
+            m = row["Month #"]
+	        t_score = BayesComb(0.5, models, w, b, m, check_vote = True)
+            if (tscore > 0.5 and s > 0.5) or (tscore < 0.5 and s < 0.5):
+                 yield row, 1/len(models)
+            else:
+                 yield row, len(models)
+
     model_list = []
+    train, test = TrainTestInds(csv_gen)
+    for row in train:
+        p1 = int(row["White Player #"])
+        p2 = int(row["Black Player #"])
+        s = InTreatScore(float(row["Score"]))
+        
+        player_dict.PerformMatch(p1, p2, s, weight = 1)
+    
+    player_dict.SetRanks()
+    player_dict.EvaluateModel(test)
+    #player_dict.GenerateLikelihood()
+    model_list.append(player_dict)
+    
     for i in range(num_models):
 
         player_dict = PlayerDict(default_rank = default_rank)
         train, test = TrainTestInds(csv_gen)
-        for row in train:
+        for row, weight in WeightMatches(model_list, csv_gen):
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
             s = InTreatScore(float(row["Score"]))
