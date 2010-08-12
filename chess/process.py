@@ -169,40 +169,41 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
             p2 = int(row["Black Player #"])
             s = float(row["Score"])
             m = row["Month #"]
-            t_score = BayesComb(0.5, models, w, b, m, check_vote = True)
-            if (tscore > 0.5 and s > 0.5) or (tscore < 0.5 and s < 0.5):
-                yield row, 1/len(models)
+            t_score = BayesComb(0.5, models, p1, p2, m, check_vote = False)
+            if (t_score >= 0.5 and s >= 0.5) or (t_score < 0.5 and s < 0.5):
+                row['weight'] = 1/len(models)
             else:
-                yield row, len(models)
+                row['weight'] = len(models)
+            yield row
 
-    model_list = []
-    train, test = TrainTestInds(csv_gen)
-    for row in train:
-        p1 = int(row["White Player #"])
-        p2 = int(row["Black Player #"])
-        s = InTreatScore(float(row["Score"]))
-        
-        player_dict.PerformMatch(p1, p2, s, weight = 1)
-    
-    player_dict.SetRanks()
-    player_dict.EvaluateModel(test)
-    #player_dict.GenerateLikelihood()
-    model_list.append(player_dict)
-    
-    for i in range(num_models):
-
+    def TrainSingle(train, default_rank = 0.5):
         player_dict = PlayerDict(default_rank = default_rank)
-        train, test = TrainTestInds(csv_gen)
-        for row, weight in WeightMatches(model_list, csv_gen):
+        for row in train:
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
             s = InTreatScore(float(row["Score"]))
+            weight = row.get('weight', 1)
+
             player_dict.PerformMatch(p1, p2, s, weight = weight)
 
         player_dict.SetRanks()
         player_dict.EvaluateModel(test)
         #player_dict.GenerateLikelihood()
-        model_list.append(player_dict)
+
+        return player_dict
+        
+
+
+
+
+    model_list = []
+
+    train, test = TrainTestInds(csv_gen, frac = 0.3)
+    model_list.append(TrainSingle(train))
+    
+    while len(test) > 1000:
+        train, test = TrainTestInds(test)
+        model_list.append(TrainSingle(WeightMatches(model_list, csv_gen)))
 
 
     return model_list
