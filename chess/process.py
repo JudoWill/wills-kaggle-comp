@@ -17,7 +17,7 @@ class Player():
         self.wins = list()
         self.loses = list()
 
-    def match(self, bp, score):
+    def match(self, bp, score, weight = 1):
         """Updates the rank based on the rank of Black-Player and the score"""
 
         if score > 0 and bp.rank > self.rank:
@@ -27,7 +27,10 @@ class Player():
         #already correct
             return
         else:
-            self.rank = max(self.rank+(score - bp.rank - self.rank)/2, 0)
+            move = score - bp.rank - self.rank
+            move *= weight/2
+            self.rank += move
+            bp.rank -= move
 
         if score < 0:
             self.wins.append(bp.pid)
@@ -90,10 +93,10 @@ class PlayerDict():
         return self.all_scores[spot-1]/self.tot
 
 
-    def PerformMatch(self, wid, bid, score):
+    def PerformMatch(self, wid, bid, score, weight = 1):
 
-        self[wid].match(self[bid], score)
-        self.match_list += [(wid, bid, score)]
+        self[wid].match(self[bid], score, weight = weight)
+        self.match_list += [(wid, bid, score, weight)]
 
     def PlayerCmp(self, wplayer, bplayer):
 
@@ -169,7 +172,7 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
             s = InTreatScore(float(row["Score"]))
-            player_dict.PerformMatch(p1, p2, s)
+            player_dict.PerformMatch(p1, p2, s, weight = weight)
 
         player_dict.SetRanks()
         player_dict.EvaluateModel(test)
