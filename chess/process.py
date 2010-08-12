@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 from operator import attrgetter
 from types import ListType
 import random, optparse
-from itertools import combinations, imap
+from itertools import combinations, imap, product
 from bisect import insort, bisect
 import numpy
 
@@ -148,10 +148,10 @@ class PlayerDict():
                 it1.rank += adj
             c += 1
 
-    def EvaluateModel(self, csv_gen):
-        self.rmse = EvaluateModel(self, csv_gen)
+    def EvaluateModel(self, csv_gen, check_vote = False):
+        self.rmse = EvaluateModel(self, csv_gen, check_vote = check_vote)
         self.score = 0.5+1/(1+exp(self.rmse))
-        print self.rmse, self.score
+        #print self.rmse, self.score
 
 def Logit(v):
     try:
@@ -175,22 +175,23 @@ def TrainTestInds(nitems, frac = 0.7):
     return train, test
 
 
-def TrainModel(csv_gen, num_models = 20, default_rank = 0):
+def TrainModel(csv_gen, **kwargs):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
-    def WeightMatches(models, csv_gen):
+    def WeightMatches(models, csv_gen, check_vote = False):
         for row in csv_gen:
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
             s = float(row["Score"])
             m = row["Month #"]
-            t_score = BayesComb(0.5, models, p1, p2, m, check_vote = False)
-            #print s, t_score
+            t_score = BayesComb(0.5, models, p1, p2, m,
+                                check_vote = check_vote)
+
             row['weight'] = 10**abs(s-t_score)
 
             yield row
 
-    def TrainSingle(train, test, default_rank = 0.5):
+    def TrainSingle(train, test, default_rank = 0.5, check_vote = True):
         player_dict = PlayerDict(default_rank = default_rank)
         for row in train:
             p1 = int(row["White Player #"])
@@ -201,27 +202,36 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
             player_dict.PerformMatch(p1, p2, s, weight = weight)
 
         player_dict.SetRanks()
-        player_dict.EvaluateModel(test)
+        player_dict.EvaluateModel(test, check_vote = check_vote)
         #player_dict.GenerateLikelihood()
 
         return player_dict
         
 
 
-
+    default_rank = kwargs.get('default_rank', 0)
+    seed_frac = kwargs.get('seed_frac', 0.3)
+    rep_frac = kwargs.get('rep_frac', 0.2)
+    check_train = kwargs.get('check_train', False)
+    check_indiv = kwargs.get('check_indiv', True)
 
     model_list = []
 
-    train, test = TrainTestInds(csv_gen, frac = 0.2)
-    model_list.append(TrainSingle(train, test))
+    train, test = TrainTestInds(csv_gen, frac = seed_frac)
+    model_list.append(TrainSingle(train, test, check_vote = check_indiv,
+                                  default_rank = default_rank))
     
     while len(test) > 1000:
     #for i in range(num_models):
-        train, test = TrainTestInds(test, frac = 0.2)
-        model_list.append(TrainSingle(WeightMatches(model_list, train), test))
+        train, test = TrainTestInds(test, frac = rep_frac)
+        gen = WeightMatches(model_list, train, check_vote = check_train)
+        model_list.append(TrainSingle(gen, test, check_vote = check_indiv,
+                                      default_rank = default_rank))
 
-    train, test = TrainTestInds(test, frac = 0.2)
-    model_list.append(TrainSingle(WeightMatches(model_list, train), test))
+    train, test = TrainTestInds(test, frac = rep_frac)
+    gen = WeightMatches(model_list, train, check_vote = check_train)
+    model_list.append(TrainSingle(gen, test, check_vote = check_indiv,
+                                      default_rank = default_rank))
 
     return model_list
 
@@ -257,7 +267,7 @@ def BayesComb(prior, models, w, b, month, check_vote = False):
 
     return res
 
-def EvaluateModel(model_dict, csv_gen):
+def EvaluateModel(model_dict, csv_gen, check_vote = False):
     """Performs the model evaluation based on the Kaggle rules"""
 
 
@@ -272,7 +282,7 @@ def EvaluateModel(model_dict, csv_gen):
         s = float(row["Score"])
         m = row["Month #"]
         if islist:
-            score = BayesComb(0.5, model_dict, p1, p2, m)
+            score = BayesComb(0.5, model_dict, p1, p2, m, check_vote = check_vote)
         else:
             score = model_dict.GetMatchScore(p1, p2, m)
 
@@ -313,6 +323,8 @@ if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-r', '--run', dest = 'run',
                       action = 'store_true', default = False)
+    parser.add_option('-o', '--optimize', dest = 'optimize',
+                      action = 'store_true', default = False)
     (options, args) = parser.parse_args()
 
 
@@ -323,16 +335,37 @@ if __name__ == '__main__':
 
     with open(INIT_DATA_FILE) as handle:
         train_rows = list(csv.DictReader(handle))
+    ntrain = int(0.8*len(train_rows))
 
-    if not options.run:
-        ntrain = int(0.8*len(train_rows))
+    if not options.run and not options.optimize:
+        #runs off default values
         model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
-
         val =  EvaluateModel(model, train_rows[ntrain+1:])
         print 'real val ', val
 
+    if options.optimize or options.run:
+        fields = ('default_rank', 'seed_frac', 'rep_frac',
+                  'check_train', 'check_indiv')
+        default_ranks = map(lambda x: x/10, range(10))
+        seed_fracs = map(lambda x: x/10, range(1,8))
+        rep_fracs = map(lambda x: x/10, range(1,8))
+        check_trains = (True, False)
+        check_indivs = (True, False)
+        bval = 100
+        for group in product(default_ranks, seed_fracs, rep_fracs,
+                                  check_trains, check_indivs):
+            pdict = dict(zip(fields, group))
+            print 'checking', pdict
+            rmodel = TrainModel(train_rows[:ntrain], **pdict)
+            val =  EvaluateModel(rmodel, train_rows[ntrain+1:])
+            print 'real val ', val
+            if val < bval:
+                best_dict = pdict
+                bval = val
+
+
     if options.run:
-        rmodel = TrainModel(train_rows)
+        rmodel = TrainModel(train_rows, **best_dict)
 
         with open(TEST_DATA_FILE) as thandle:
             csv_gen = csv.DictReader(thandle)
