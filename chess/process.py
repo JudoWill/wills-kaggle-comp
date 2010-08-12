@@ -176,7 +176,7 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
                 row['weight'] = len(models)
             yield row
 
-    def TrainSingle(train, default_rank = 0.5):
+    def TrainSingle(train, test, default_rank = 0.5):
         player_dict = PlayerDict(default_rank = default_rank)
         for row in train:
             p1 = int(row["White Player #"])
@@ -199,12 +199,14 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
     model_list = []
 
     train, test = TrainTestInds(csv_gen, frac = 0.3)
-    model_list.append(TrainSingle(train))
+    model_list.append(TrainSingle(train, test))
     
     while len(test) > 1000:
-        train, test = TrainTestInds(test)
-        model_list.append(TrainSingle(WeightMatches(model_list, csv_gen)))
+        train, test = TrainTestInds(test, frac = 0.3)
+        model_list.append(TrainSingle(WeightMatches(model_list, csv_gen), test))
 
+    train, test = TrainTestInds(test, frac = 0.3)
+    model_list.append(TrainSingle(WeightMatches(model_list, csv_gen), test))
 
     return model_list
 
