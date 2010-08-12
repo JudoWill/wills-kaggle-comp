@@ -320,7 +320,7 @@ def ObjFun(xtest, fields, train_rows, test_rows, check_train, check_indiv):
 
     rmodel = TrainModel(train_rows, **pdict)
     val = EvaluateModel(rmodel, test_rows)
-
+    print val
     return val
 
     
@@ -360,17 +360,19 @@ if __name__ == '__main__':
         check_indivs = (True, False)
         bval = 100
 
-        ieqcons = [lambda x: x[0], lambda x: x[1], lambda x: x[2],
-                   lambda x: 1-x[0], lambda x: 1-x[1], lambda x: 1-x[2], ]
+
         for check_train, check_indiv in product(check_trains, check_indivs):
 
-            x, val, its, lmode, smode = scipy.optimize.fmin_slsqp(ObjFun,
-                                            [0.5, 0.5, 0.5], ieqcons = ieqcons,
-                                            args = (fields, train_rows[:ntrain],
-                                                    train_rows[ntrain+1:],
-                                                    check_train, check_indiv),
-                                            full_output = True, iprint = 2)
+            x = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
+                                      upper = 1, lower = 0,
+                                      args = (fields, train_rows[:ntrain],
+                                              train_rows[ntrain+1:],
+                                              check_train, check_indiv))
+            print 'finished annealing:', x
             pdict = dict(zip(fields, x + [check_train, check_indiv]))
+            val = ObjFun(x, fields, train_rows[:ntrain],
+                        train_rows[ntrain+1:],
+                        check_train, check_indiv)
             if val < bval:
                 best_dict = pdict
                 bval = val
