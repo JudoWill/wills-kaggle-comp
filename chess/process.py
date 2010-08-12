@@ -298,7 +298,7 @@ def EvaluateModel(model_dict, csv_gen, check_vote = False):
         mse += (predicted_agg[key] - correct_agg[key])**2
     try:
         rmse = sqrt(mse/len(correct_agg.keys()))
-    except sqrt(mse/len(correct_agg.keys())):
+    except ZeroDivisionError:
         rmse = 1000
     return rmse
 
@@ -323,7 +323,7 @@ def ObjFun(xtest, fields, train_rows, test_rows, check_train, check_indiv):
 
     rmodel = TrainModel(train_rows, **pdict)
     val = EvaluateModel(rmodel, test_rows)
-    print val
+    print xtest, val
     return val
 
     
@@ -366,16 +366,18 @@ if __name__ == '__main__':
 
         for check_train, check_indiv in product(check_trains, check_indivs):
 
-            x = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
-                                      upper = 1, lower = 0, maxiter = 10,
+            out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
+                                      upper = 1, lower = 0,
                                       args = (fields, train_rows[:ntrain],
                                               train_rows[ntrain+1:],
-                                              check_train, check_indiv))
-            print 'finished annealing:', x
+                                              check_train, check_indiv),
+                                      full_output = True)
+            print 'finished annealing:', out
+
+            x, retval, val, T, feval, iters, accept = out
+
             pdict = dict(zip(fields, x + [check_train, check_indiv]))
-            val = ObjFun(x, fields, train_rows[:ntrain],
-                        train_rows[ntrain+1:],
-                        check_train, check_indiv)
+
             if val < bval:
                 best_dict = pdict
                 bval = val
