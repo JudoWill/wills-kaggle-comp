@@ -1,6 +1,6 @@
 from __future__ import division
 import csv
-from math import sqrt
+from math import sqrt, log, exp
 from collections import defaultdict, deque
 from operator import attrgetter
 from types import ListType
@@ -27,10 +27,14 @@ class Player():
         #already correct
             return
         else:
-            move = score - bp.rank - self.rank
-            move *= weight/2
-            self.rank += move
-            bp.rank -= move
+            w = log(weight)
+            nw = 1/(1+exp(-w))
+            move = score - self.rank - bp.rank
+            scaled_move = w*nw*move
+            #print 'move', self.rank, bp.rank, weight, w, nw, move, scaled_move
+            self.rank += scaled_move
+            bp.rank -= scaled_move
+
 
         if score < 0:
             self.wins.append(bp.pid)
@@ -66,8 +70,9 @@ class PlayerDict():
 
         p1 = self[wid]
         p2 = self[bid]
+        score = p1.rank - p2.rank
 
-        return OutTreatScore(p1.rank - p2.rank)
+        return Logit(score)
 
     def GenerateLikelihood(self):
 
@@ -144,9 +149,19 @@ class PlayerDict():
             c += 1
 
     def EvaluateModel(self, csv_gen):
+        self.rmse = EvaluateModel(self, csv_gen)
+        self.score = 0.5+1/(1+exp(self.rmse))
+        print self.rmse, self.score
 
-        self.score = EvaluateModel(self, csv_gen)
-        print self.score
+def Logit(v):
+    try:
+        r = 1/(1+exp(-v))
+    except OverflowError:
+        if v > 0:
+            r = 1
+        else:
+            r = 0
+    return r
 
 def TrainTestInds(nitems, frac = 0.7):
     train = []
@@ -170,10 +185,9 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
             s = float(row["Score"])
             m = row["Month #"]
             t_score = BayesComb(0.5, models, p1, p2, m, check_vote = False)
-            if (t_score >= 0.5 and s >= 0.5) or (t_score < 0.5 and s < 0.5):
-                row['weight'] = 1/len(models)
-            else:
-                row['weight'] = len(models)
+            #print s, t_score
+            row['weight'] = 10**abs(s-t_score)
+
             yield row
 
     def TrainSingle(train, test, default_rank = 0.5):
@@ -198,20 +212,21 @@ def TrainModel(csv_gen, num_models = 20, default_rank = 0):
 
     model_list = []
 
-    train, test = TrainTestInds(csv_gen, frac = 0.3)
+    train, test = TrainTestInds(csv_gen, frac = 0.2)
     model_list.append(TrainSingle(train, test))
     
     while len(test) > 1000:
-        train, test = TrainTestInds(test, frac = 0.3)
-        model_list.append(TrainSingle(WeightMatches(model_list, csv_gen), test))
+    #for i in range(num_models):
+        train, test = TrainTestInds(test, frac = 0.2)
+        model_list.append(TrainSingle(WeightMatches(model_list, train), test))
 
-    train, test = TrainTestInds(test, frac = 0.3)
-    model_list.append(TrainSingle(WeightMatches(model_list, csv_gen), test))
+    train, test = TrainTestInds(test, frac = 0.2)
+    model_list.append(TrainSingle(WeightMatches(model_list, train), test))
 
     return model_list
 
 
-def BayesComb(prior, models, w, b, month, check_vote = True):
+def BayesComb(prior, models, w, b, month, check_vote = False):
 
 
 
