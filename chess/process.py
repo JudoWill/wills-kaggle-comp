@@ -5,7 +5,8 @@ from collections import defaultdict, deque
 from operator import attrgetter
 from types import ListType
 import random, optparse
-from itertools import combinations, imap, product
+from itertools import combinations, izip, product, repeat, imap, chain
+from multiprocessing import Pool
 from bisect import insort, bisect
 import numpy
 
@@ -315,7 +316,16 @@ def InTreatScore(inscore):
 def OutTreatScore(inscore):
     return (inscore/2)+0.5
 
+def Linker(input):
+    group, fields, train_rows, test_rows = input
+    pdict = dict(zip(chain.from_iterable(fields), group))
 
+    rmodel = TrainModel(chain.from_iterable(train_rows), **pdict)
+    val = EvaluateModel(rmodel, chain.from_iterable(test_rows))
+
+    return pdict, val
+
+    
 if __name__ == '__main__':
 
 
@@ -352,12 +362,15 @@ if __name__ == '__main__':
         check_trains = (True, False)
         check_indivs = (True, False)
         bval = 100
-        for group in product(default_ranks, seed_fracs, rep_fracs,
-                                  check_trains, check_indivs):
-            pdict = dict(zip(fields, group))
-            print 'checking', pdict
-            rmodel = TrainModel(train_rows[:ntrain], **pdict)
-            val =  EvaluateModel(rmodel, train_rows[ntrain+1:])
+        pool = Pool(processes = 2)
+        group_gen = product(default_ranks, seed_fracs, rep_fracs,
+                            check_trains, check_indivs)
+        map_iter = izip(group_gen, repeat((fields,)),
+                        repeat((train_rows[:ntrain],)),
+                        repeat((train_rows[ntrain+1:],)))
+        for pdict, val in pool.imap(Linker, map_iter, chunksize = 5):
+
+            print 'checked', pdict         
             print 'real val ', val
             if val < bval:
                 best_dict = pdict
