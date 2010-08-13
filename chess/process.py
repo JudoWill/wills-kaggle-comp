@@ -112,6 +112,8 @@ if __name__ == '__main__':
             if options.storeiter:
                 print 'save restart point'
                 resdict = {'start':i+1, 'results':gdict}
+                with open('restart.yaml', 'w') as handle:
+                    yaml.dump(resdict, handle)
             
         bdict = min(gdict.values(), key = itemgetter('val'))
         if options.store:
