@@ -2,7 +2,7 @@ from __future__ import division
 import csv
 from math import sqrt, log, exp
 from collections import defaultdict, deque
-from operator import attrgetter
+from operator import attrgetter, getitem, itemgetter
 from types import ListType
 import random, optparse
 from itertools import combinations, izip, product, repeat, imap, chain
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         val =  EvaluateModel(model, test)
         print 'real val ', val
 
-    best_dict = {}
+    cdict = {}
     if options.optimize or options.run:
         fields = ('default_rank', 'seed_frac', 'rep_frac',
                   'prior', 'prior_score',
@@ -74,31 +74,35 @@ if __name__ == '__main__':
         check_indivs = (True, False)
         bval = 100
 
+        gdict = {}
 
-        for check_train, check_indiv in product(check_trains, check_indivs):
+        for  i in range(10):
+            train, test = TrainTestInds(train_rows, frac = 0.6)
+            for check_train, check_indiv in product(check_trains, check_indivs):
+                cdict = gdict.get((check_train, check_indiv), {'val':100,
+                                                               'init':[0.5, 0.5, 0.5, 0.5, 0.5]})
+                out = scipy.optimize.anneal(ObjFun, cdict['init'],
+                                          T0 = 1.2, dwell = 10,
+                                          args = (fields, train, test,
+                                                  check_train, check_indiv),
+                                          full_output = True, maxeval = 100)
+                print 'finished annealing:', out
 
-            out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5, 0.5, 0.5],
-                                      upper = numpy.array([1, 1, 1, 1, 1]),
-                                      lower = numpy.array([0, 0, 0, 0, 0]),
-                                      T0 = 1.2,
-                                      args = (fields, train, test,
-                                              check_train, check_indiv),
-                                      full_output = True, maxeval = 500)
-            print 'finished annealing:', out
+                x, val, retval, T, feval, iters, accept = out
 
-            x, val, retval, T, feval, iters, accept = out
+                pdict = dict(zip(fields, list(iter(x)) + [check_train, check_indiv]))
+                pdict['val'] = val
+                pdict['init'] = x
 
-            pdict = dict(zip(fields, list(iter(x)) + [check_train, check_indiv]))
+                if pdict['val'] < cdict['val']:
+                    gdict[(check_train, check_indiv)] = pdict
+                    print 'got better: ', pdict
 
-            if val < bval:
-                best_dict = pdict
-                bval = val
-                print 'checked', pdict
-                print 'real val ', val
 
 
     if options.run:
-        rmodel = TrainModel(train_rows, **best_dict)
+        bdict = min(cdict.values(), key = itemgetter('val'))
+        rmodel = TrainModel(train_rows, **bdict)
 
         with open(TEST_DATA_FILE) as thandle:
             csv_gen = csv.DictReader(thandle)
