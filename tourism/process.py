@@ -30,13 +30,14 @@ def FloatConv(string):
     return v
 
 
-def PolyFit(t, x, deg = 4):
+def PolyFit(t, x, deg = 1):
     """Fits polynomial with NaNs"""
 
     v = ~numpy.isnan(x)
-    if sum(v) == 0:
-        return numpy.array([0])
     use_deg = min(deg, numpy.sum(v)-1)
+    if sum(v) == 0 or deg < 1:
+        return numpy.array([0])
+
     return numpy.polyfit(t[v], x[v], use_deg)
 
 
@@ -51,12 +52,13 @@ if __name__ == '__main__':
 
     all_data = numpy.reshape(all_data, (-1, len(keys)))
     times = numpy.arange(all_data.shape[0])
+    tnum = 39
 
-    train_time = times[0:7]
-    train_data = all_data[0:7,:]
+    train_time = times[0:tnum]
+    train_data = all_data[0:tnum,:]
 
-    test_time = times[8:]
-    test_data = all_data[8:,:]
+    test_time = times[tnum+1:]
+    test_data = all_data[tnum+1:,:]
 
     poly_coef = []
     for col in range(test_data.shape[1]):
@@ -67,8 +69,12 @@ if __name__ == '__main__':
     real_val = []
 
     for col, coef in zip(xrange(test_data.shape[1]), poly_coef):
-        guess_val.extend(numpy.polyval(coef, test_time))
-        real_val.extend(test_data[:,col])
+        if len(coef) >= 2:
+            g = numpy.polyval(coef, test_time)
+            r = test_data[:,col]
+            #print r, g
+            guess_val.extend(g)
+            real_val.extend(r)
 
 
     mase = CalculateMASE(guess_val, real_val)
