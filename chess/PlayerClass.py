@@ -239,19 +239,6 @@ def EvaluateModel(model_dict, csv_gen, check_vote = False):
 
 
 
-def TrainTestInds(nitems, frac = 0.7):
-    train = []
-    test = []
-    for item in nitems:
-        if random.random() < frac:
-            train.append(item)
-        else:
-            test.append(item)
-
-    return train, test
-
-
-
 def TrainModel(csv_gen, **kwargs):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 

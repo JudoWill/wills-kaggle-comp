@@ -25,3 +25,15 @@ def InTreatScore(inscore):
 
 def OutTreatScore(inscore):
     return (inscore/2)+0.5
+
+
+def TrainTestInds(nitems, frac = 0.7):
+    train = []
+    test = []
+    for item in nitems:
+        if random.random() < frac:
+            train.append(item)
+        else:
+            test.append(item)
+
+    return train, test
