@@ -55,13 +55,13 @@ if __name__ == '__main__':
 
 
     with open(INIT_DATA_FILE) as handle:
-        train_rows = list(csv.DictReader(handle))
-    ntrain = int(0.8*len(train_rows))
+        train_rows = csv.DictReader(handle)
+    train, test = TrainTestInds(train_rows, frac = 0.6)
 
     if not options.run and not options.optimize:
         #runs off default values
-        model = TrainModel(train_rows[:ntrain], default_rank = 0.5)
-        val =  EvaluateModel(model, train_rows[ntrain+1:])
+        model = TrainModel(train, default_rank = 0.5)
+        val =  EvaluateModel(model, test)
         print 'real val ', val
 
     best_dict = {}
@@ -81,8 +81,7 @@ if __name__ == '__main__':
                                       upper = numpy.array([1, 1, 1, 1, 1]),
                                       lower = numpy.array([0, 0, 0, 0, 0]),
                                       T0 = 1.2,
-                                      args = (fields, train_rows[:ntrain],
-                                              train_rows[ntrain+1:],
+                                      args = (fields, train, test,
                                               check_train, check_indiv),
                                       full_output = True, maxeval = 500)
             print 'finished annealing:', out
