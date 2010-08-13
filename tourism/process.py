@@ -26,6 +26,11 @@ def FloatConv(string):
     return v
 
 
+def PolyFit():
+    pass
+
+
+
 if __name__ == '__main__':
 
 
