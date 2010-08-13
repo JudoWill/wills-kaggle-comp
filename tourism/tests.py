@@ -13,4 +13,4 @@ def testMASE():
             tes.append(row['Guess'])
             act.append(row['Actual'])
     mase = CalculateMASE(tes, act)
-    nose.tools.assert_almost_equals(mase, 1.00, 2)
+    nose.tools.assert_almost_equals(mase, 2.5217, 2)
