@@ -220,9 +220,10 @@ def TrainModel(csv_gen, **kwargs):
     train, test = TrainTestInds(csv_gen, frac = seed_frac)
     model_list.append(TrainSingle(train, test, check_vote = check_indiv,
                                   default_rank = default_rank))
-    
-    while len(test) > 1000:
+    c = 0
+    while len(test) > 1000 and c < 50:
     #for i in range(num_models):
+        c += 1
         train, test = TrainTestInds(test, frac = rep_frac)
         gen = WeightMatches(model_list, train, check_vote = check_train)
         model_list.append(TrainSingle(gen, test, check_vote = check_indiv,
@@ -367,7 +368,7 @@ if __name__ == '__main__':
         for check_train, check_indiv in product(check_trains, check_indivs):
 
             out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
-                                      upper = 1, lower = 0,
+                                      upper = 0.99, lower = 0.05,
                                       args = (fields, train_rows[:ntrain],
                                               train_rows[ntrain+1:],
                                               check_train, check_indiv),
