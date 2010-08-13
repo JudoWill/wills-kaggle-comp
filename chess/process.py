@@ -337,6 +337,10 @@ def OutTreatScore(inscore):
     return (inscore/2)+0.5
 
 def ObjFun(xtest, fields, train_rows, test_rows, check_train, check_indiv):
+    if numpy.any(xtest<0) or numpy.any(xtest>1):
+        print 'here'
+        return numpy.Inf
+
     pdict = dict(zip(fields, list(iter(xtest)) + [check_train, check_indiv]))
 
     rmodel = TrainModel(train_rows, **pdict)
@@ -386,7 +390,8 @@ if __name__ == '__main__':
         for check_train, check_indiv in product(check_trains, check_indivs):
 
             out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5, 0.5, 0.5],
-                                      upper = 1, lower = 0,
+                                      upper = numpy.array([1, 1, 1, 1, 1]),
+                                      lower = numpy.array([0, 0, 0, 0, 0]),
                                       args = (fields, train_rows[:ntrain],
                                               train_rows[ntrain+1:],
                                               check_train, check_indiv),
