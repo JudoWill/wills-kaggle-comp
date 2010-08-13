@@ -98,7 +98,7 @@ if __name__ == '__main__':
                 if pdict['val'] < cdict['val']:
                     gdict[(check_train, check_indiv)] = pdict
                     print 'got better: ', pdict
-        bdict = min(cdict.values(), key = itemgetter('val'))
+        bdict = min(gdict.values(), key = itemgetter('val'))
         if options.store:
             with open(options.store, 'w') as handle:
                 yaml.dump(bdict, handle)
