@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
 
     with open(INIT_DATA_FILE) as handle:
-        train_rows = csv.DictReader(handle)
+        train_rows = list(csv.DictReader(handle))
     train, test = TrainTestInds(train_rows, frac = 0.6)
 
     if not options.run and not options.optimize:
@@ -82,7 +82,8 @@ if __name__ == '__main__':
                 cdict = gdict.get((check_train, check_indiv), {'val':100,
                                                                'init':[0.5, 0.5, 0.5, 0.5, 0.5]})
                 out = scipy.optimize.anneal(ObjFun, cdict['init'],
-                                          T0 = 1.2, dwell = 10,
+                                          T0 = 1.2, lower = [0,0,0,0,0],
+                                          upper = [1,1,1,1,1], dwell = 10,
                                           args = (fields, train, test,
                                                   check_train, check_indiv),
                                           full_output = True, maxeval = 100)
