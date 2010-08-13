@@ -288,13 +288,16 @@ def TrainModel(csv_gen, **kwargs):
 
 
 
-    default_rank = kwargs.get('default_rank', 0)
-    seed_frac = kwargs.get('seed_frac', 0.3)
-    rep_frac = kwargs.get('rep_frac', 0.2)
-    prior = kwargs.get('prior', 0.5)
-    prior_score = kwargs.get('prior_score', 0.5)
-    check_train = kwargs.get('check_train', False)
-    check_indiv = kwargs.get('check_indiv', True)
+    default_rank = kwargs.pop('default_rank', 0)
+    seed_frac = kwargs.pop('seed_frac', 0.3)
+    rep_frac = kwargs.pop('rep_frac', 0.2)
+    prior = kwargs.pop('prior', 0.5)
+    prior_score = kwargs.pop('prior_score', 0.5)
+    check_train = kwargs.pop('check_train', False)
+    check_indiv = kwargs.pop('check_indiv', True)
+
+    if len(kwargs) > 0:
+        raise TypeError, 'Unrecognized kwargs: %s' % (','.join(kwargs.keys()))
 
     model_list = []
 
