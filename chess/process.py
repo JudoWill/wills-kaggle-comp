@@ -150,7 +150,10 @@ class PlayerDict():
 
     def EvaluateModel(self, csv_gen, check_vote = False):
         self.rmse = EvaluateModel(self, csv_gen, check_vote = check_vote)
-        self.score = 0.5+1/(1+exp(self.rmse))
+        try:
+            self.score = 0.5+1/(1+exp(self.rmse))
+        except OverflowError:
+            self.score = 0.5
         #print self.rmse, self.score
 
 def Logit(v):
