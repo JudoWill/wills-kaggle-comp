@@ -1,12 +1,9 @@
 from __future__ import division
 import csv
-from math import sqrt, log, exp
-from collections import defaultdict, deque
-from operator import attrgetter, getitem, itemgetter
-from types import ListType
-import random, optparse
+from operator import itemgetter
+import  optparse
 from itertools import combinations, izip, product, repeat, imap, chain
-import numpy
+import numpy, yaml
 import scipy.optimize
 
 from PlayerClass import *
@@ -46,6 +43,8 @@ if __name__ == '__main__':
                       action = 'store_true', default = False)
     parser.add_option('-o', '--optimize', dest = 'optimize',
                       action = 'store_true', default = False)
+    parser.add_option('-s', '--store', dest = 'store',
+                      type = 'string', default = 'optimized.yaml')
     (options, args) = parser.parse_args()
 
 
@@ -65,6 +64,7 @@ if __name__ == '__main__':
         print 'real val ', val
 
     cdict = {}
+    bdict = None
     if options.optimize or options.run:
         fields = ('default_rank', 'seed_frac', 'rep_frac',
                   'prior', 'prior_score',
@@ -97,11 +97,18 @@ if __name__ == '__main__':
                 if pdict['val'] < cdict['val']:
                     gdict[(check_train, check_indiv)] = pdict
                     print 'got better: ', pdict
+        bdict = min(cdict.values(), key = itemgetter('val'))
+        if options.store:
+            with open(options.store, 'w') as handle:
+                yaml.dump(bdict, handle)
 
 
 
     if options.run:
-        bdict = min(cdict.values(), key = itemgetter('val'))
+        if bdict is None:
+            with open(options.store) as handle:
+                bdict = yaml.load(handle)
+
         rmodel = TrainModel(train_rows, **bdict)
 
         with open(TEST_DATA_FILE) as thandle:
