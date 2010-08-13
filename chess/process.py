@@ -126,7 +126,8 @@ if __name__ == '__main__':
         if bdict is None:
             with open(options.store) as handle:
                 bdict = yaml.load(handle)
-
+        bdict.pop('val',0)
+        bdict.pop('init',0)
         rmodel = TrainModel(train_rows, **bdict)
 
         with open(TEST_DATA_FILE) as thandle:
