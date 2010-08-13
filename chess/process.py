@@ -27,7 +27,6 @@ def WritePrediction(model_dict, csv_gen, out_handle):
 
 def ObjFun(xtest, fields, train_rows, test_rows, check_train, check_indiv):
     if numpy.any(xtest<0) or numpy.any(xtest>1):
-        print 'here'
         return numpy.Inf
 
     pdict = dict(zip(fields, list(iter(xtest)) + [check_train, check_indiv]))
