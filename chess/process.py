@@ -187,14 +187,16 @@ def TrainTestInds(nitems, frac = 0.7):
 def TrainModel(csv_gen, **kwargs):
     """Trains the model based on receiving a 'csv-generator' from the rows"""
 
-    def WeightMatches(models, csv_gen, check_vote = False):
+    def WeightMatches(models, csv_gen, check_vote = False,
+                      prior = 0.5, prior_score = 0.5):
         for row in csv_gen:
             p1 = int(row["White Player #"])
             p2 = int(row["Black Player #"])
             s = float(row["Score"])
             m = row["Month #"]
-            t_score = BayesComb(0.5, models, p1, p2, m,
-                                check_vote = check_vote)
+            t_score = BayesComb(prior, models, p1, p2, m,
+                                check_vote = check_vote,
+                                prior_score = prior_score)
 
             row['weight'] = 10**abs(s-t_score)
 
@@ -221,6 +223,8 @@ def TrainModel(csv_gen, **kwargs):
     default_rank = kwargs.get('default_rank', 0)
     seed_frac = kwargs.get('seed_frac', 0.3)
     rep_frac = kwargs.get('rep_frac', 0.2)
+    prior = kwargs.get('prior', 0.5)
+    prior_score = kwargs.get('prior_score', 0.5)
     check_train = kwargs.get('check_train', False)
     check_indiv = kwargs.get('check_indiv', True)
 
@@ -234,19 +238,21 @@ def TrainModel(csv_gen, **kwargs):
     #for i in range(num_models):
         c += 1
         train, test = TrainTestInds(test, frac = rep_frac)
-        gen = WeightMatches(model_list, train, check_vote = check_train)
+        gen = WeightMatches(model_list, train, check_vote = check_train,
+                            prior = prior, prior_score = prior_score)
         model_list.append(TrainSingle(gen, test, check_vote = check_indiv,
                                       default_rank = default_rank))
 
     train, test = TrainTestInds(test, frac = rep_frac)
-    gen = WeightMatches(model_list, train, check_vote = check_train)
+    gen = WeightMatches(model_list, train, check_vote = check_train,
+                        prior = prior, prior_score = prior_score)
     model_list.append(TrainSingle(gen, test, check_vote = check_indiv,
                                       default_rank = default_rank))
 
     return model_list
 
 
-def BayesComb(prior, models, w, b, month, check_vote = False):
+def BayesComb(prior, models, w, b, month, check_vote = False, prior_score = 0.5):
 
 
 
@@ -269,6 +275,8 @@ def BayesComb(prior, models, w, b, month, check_vote = False):
     for model in models:
         scores += [model.GetMatchScore(w,b, month)]
         likes += [model.score]
+    scores += [prior]
+    likes += [prior_score]
 
     tot = sum(likes)
     evi = map(lambda x: x/tot, likes)
@@ -367,6 +375,7 @@ if __name__ == '__main__':
     best_dict = {}
     if options.optimize or options.run:
         fields = ('default_rank', 'seed_frac', 'rep_frac',
+                  'prior', 'prior_score'
                   'check_train', 'check_indiv')
 
         check_trains = (True, False)
@@ -376,17 +385,17 @@ if __name__ == '__main__':
 
         for check_train, check_indiv in product(check_trains, check_indivs):
 
-            out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5],
-                                      upper = 0.99, lower = 0.05,
+            out = scipy.optimize.anneal(ObjFun,[0.5, 0.5, 0.5, 0.5, 0.5],
+                                      upper = 1, lower = 0,
                                       args = (fields, train_rows[:ntrain],
                                               train_rows[ntrain+1:],
                                               check_train, check_indiv),
-                                      full_output = True)
+                                      full_output = True, maxeval = 500)
             print 'finished annealing:', out
 
             x, retval, val, T, feval, iters, accept = out
 
-            pdict = dict(zip(fields, x + [check_train, check_indiv]))
+            pdict = dict(zip(fields, list(iter(x)) + [check_train, check_indiv]))
 
             if val < bval:
                 best_dict = pdict
