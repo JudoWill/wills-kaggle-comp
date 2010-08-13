@@ -5,6 +5,7 @@ import  optparse
 from itertools import combinations, izip, product, repeat, imap, chain
 import numpy, yaml
 import scipy.optimize
+import os.path
 
 from PlayerClass import *
 from utils import *
@@ -45,6 +46,10 @@ if __name__ == '__main__':
                       action = 'store_true', default = False)
     parser.add_option('-s', '--store', dest = 'store',
                       type = 'string', default = 'optimized.yaml')
+    parser.add_option('', '--storeiter', dest = 'storeiter',
+                      action = 'store_true', default = True)
+    parser.add_option('-i', '--iterations', default = 10, type = 'int',
+                      dest = 'iterations')
     (options, args) = parser.parse_args()
 
 
@@ -75,8 +80,14 @@ if __name__ == '__main__':
         bval = 100
 
         gdict = {}
+        start = 0
+        if options.storeiter and os.path.exists('restart.yaml'):
+            with open('restart.yaml') as handle:
+                resdict = yaml.load(handle)
+                start = resdict['start']
+                gdict = resdict['results']
 
-        for  i in range(10):
+        for i in range(start, options.iterations):
             train, test = TrainTestInds(train_rows, frac = 0.6)
             for check_train, check_indiv in product(check_trains, check_indivs):
                 cdict = gdict.get((check_train, check_indiv), {'val':100,
@@ -98,6 +109,10 @@ if __name__ == '__main__':
                 if pdict['val'] < cdict['val']:
                     gdict[(check_train, check_indiv)] = pdict
                     print 'got better: ', pdict
+            if options.storeiter:
+                print 'save restart point'
+                resdict = {'start':i+1, 'results':gdict}
+            
         bdict = min(gdict.values(), key = itemgetter('val'))
         if options.store:
             with open(options.store, 'w') as handle:
