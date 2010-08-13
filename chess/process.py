@@ -13,20 +13,6 @@ from PlayerClass import *
 from utils import *
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def WritePrediction(model_dict, csv_gen, out_handle):
 
     out_handle.write('"Month #","White Player #","Black Player #","Score"\n')
