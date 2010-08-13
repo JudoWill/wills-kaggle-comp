@@ -28,7 +28,13 @@ class Player():
             return
         else:
             w = log(weight)
-            nw = 1/(1+exp(-w))
+            try:
+                nw = 1/(1+exp(-w))
+            except OverflowError:
+                if w > 0:
+                    nw = 1
+                else:
+                    nw = 0
             move = score - self.rank - bp.rank
             scaled_move = w*nw*move
             #print 'move', self.rank, bp.rank, weight, w, nw, move, scaled_move
