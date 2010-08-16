@@ -26,9 +26,13 @@ def CalculateMASE(train_guess, train_correct, test_guess, test_correct):
     def CacluateNaive(train_correct):
 
         error = 0
+        c = 0
         for t1, t2 in zip(train_correct[1:], train_correct):
-            error += abs(t1-t2)
-        return error/(len(train_correct)-1)
+            res = abs(t1-t2)
+            if not numpy.isnan(res):
+                error += res
+                c += 1
+        return error/c
 
 
     try:
@@ -105,14 +109,17 @@ if __name__ == '__main__':
 
         train_guess = numpy.polyval(coef, train_time)
         test_guess = numpy.polyval(coef, test_time)
-        print train_data[:,col]
+
         train_nval, test_nval = CalculateMASE(train_guess, train_data[:,col],
                                               test_guess, test_data[:,col])
 
         print train_nval, test_nval
         train_vals.append(train_nval)
-        test_vals.append(test_vals)
+        test_vals.append(test_nval)
+    train_vals = numpy.fromiter(train_vals, numpy.float)
+    test_vals = numpy.fromiter(test_vals, numpy.float)
 
+    print test_vals.mean()
 
 
 
