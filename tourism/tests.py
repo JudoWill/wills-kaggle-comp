@@ -36,3 +36,21 @@ def CheckMASE(*args):
     train_mase, test_mase = CalculateMASE(*args[:4])
     nose.tools.assert_almost_equals(train_mase, args[4], 1)
     nose.tools.assert_almost_equals(test_mase, args[5], 1)
+
+
+
+def testNanmean():
+    """Test the nanmean function"""
+
+    tests = [(numpy.array([1.0, 2.0, numpy.nan]).transpose(), 1.5),
+            (numpy.array([1.0, 2.0, 3.0]), 2.0),
+            (numpy.array([0.0, 0.0, numpy.nan]), 0)]
+    
+    for test, val in tests:
+        yield CheckNanmean, test, val
+
+
+def CheckNanmean(test, val):    
+    res = nanmean(test)
+    nose.tools.assert_almost_equals(res, val, 3)
+    
