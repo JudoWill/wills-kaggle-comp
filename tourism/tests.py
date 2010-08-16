@@ -35,4 +35,4 @@ def testMASE():
 def CheckMASE(*args):
     train_mase, test_mase = CalculateMASE(*args[:4])
     nose.tools.assert_almost_equals(train_mase, args[4], 1)
-    nose.tools.assert_almost_equals(test_mase, args[5], 1)    
+    nose.tools.assert_almost_equals(test_mase, args[5], 1)
