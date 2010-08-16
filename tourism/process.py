@@ -109,8 +109,8 @@ if __name__ == '__main__':
             real_val.extend(r)
 
 
-    mase = CalculateMASE(guess_val, real_val)
-    print mase
+
+    
 
 
 
