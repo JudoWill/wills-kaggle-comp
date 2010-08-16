@@ -5,20 +5,52 @@ from operator import itemgetter
 from itertools import imap, chain
 
 
-def CalculateMASE(test_in, cor_in):
+def nanmean(v1, axis = None):
+    """Averages the non-nan elements."""
+
+    temp = v1
+    mask = numpy.isnan(temp)
+
+    temp[mask] = 0
+    summed = numpy.sum(temp, axis = axis)
+
+    return summed / numpy.sum(~mask, axis = axis)
+
+
+
+
+
+def CalculateMASE(train_guess, train_correct, test_guess, test_correct):
     """Calculates the Mean Absolute Scaled Error"""
 
+    def CacluateNaive(train_correct):
+
+        error = 0
+        for t1, t2 in zip(train_correct[1:], train_correct):
+            error += abs(t1-t2)
+        return error/(len(train_correct)-1)
+
+
     try:
-        abs_error = abs(test_in - cor_in)
+        abs_error_train = abs(train_guess - train_correct)
+        abs_error_test  = abs(test_guess - test_correct)
     except TypeError:
-        abs_error = abs(numpy.fromiter(test_in, numpy.float) - numpy.fromiter(cor_in, numpy.float))
+        #if they're the wrong type then convert them accordingly
+        train_guess = numpy.fromiter(train_guess, numpy.float)
+        train_correct = numpy.fromiter(train_correct, numpy.float)
+        test_guess = numpy.fromiter(test_guess, numpy.float)
+        test_correct = numpy.fromiter(test_correct, numpy.float)
+        abs_error_train = abs(train_guess - train_correct)
+        abs_error_test  = abs(test_guess - test_correct)
 
-    mask = ~numpy.isnan(abs_error)
-    mae = abs_error[mask].mean()
+    naive_scale = CacluateNaive(train_correct)
 
-    #scaled_errors = abs_error[mask]/mae
-    #mase = scaled_errors.mean()
-    return mae
+    train_scaled_errors = abs_error_train/naive_scale
+    test_scaled_errors = abs_error_test/naive_scale
+
+    train_mase = nanmean(train_scaled_errors)
+    test_mase = nanmean(test_scaled_errors)
+    return train_mase, test_mase
 
 
 def FloatConv(string):
