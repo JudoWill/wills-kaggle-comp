@@ -93,20 +93,27 @@ if __name__ == '__main__':
     test_data = all_data[tnum+1:,:]
 
     poly_coef = []
-    for col in range(test_data.shape[1]):
-        coef = PolyFit(train_time, train_data[:, col])
-        poly_coef.append(coef)
+    for col in range(train_data.shape[1]):
+        poly_coef.append(PolyFit(train_time, train_data[:,col]))
 
     guess_val = []
     real_val = []
+    train_vals = []
+    test_vals = []
 
     for col, coef in zip(xrange(test_data.shape[1]), poly_coef):
-        if len(coef) >= 2:
-            g = numpy.polyval(coef, test_time)
-            r = test_data[:,col]
-            #print r, g
-            guess_val.extend(g)
-            real_val.extend(r)
+
+        train_guess = numpy.polyval(coef, train_time)
+        test_guess = numpy.polyval(coef, test_time)
+        print train_data[:,col]
+        train_nval, test_nval = CalculateMASE(train_guess, train_data[:,col],
+                                              test_guess, test_data[:,col])
+
+        print train_nval, test_nval
+        train_vals.append(train_nval)
+        test_vals.append(test_vals)
+
+
 
 
 
