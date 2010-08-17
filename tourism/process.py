@@ -3,6 +3,7 @@ import csv
 import numpy
 from operator import itemgetter
 from itertools import imap, chain
+from copy import deepcopy, deepcopy
 
 
 def nanmean(v1, axis = None):
@@ -96,16 +97,19 @@ class TourismSeries():
     def __init__(self, times, data, ID):
 
         self.times = times
-        self.data = data
+        self.real_data = data
         self.ID = ID
         self.predicted_data = numpy.ones_like(data)*numpy.nan
         self.coef = None
+        self.train_rows = None
 
     def PredictData(self, series_list, linkage, train_rows = 39):
 
+        self.train_rows = train_rows
+
         other_vals = SeriesList2Mat(series_list)
-        contib = numpy.nansum(other_vals*self.data, axis = 1)
-        unaccounted_data = self.data-contrib
+        contrib = numpy.nansum(other_vals*self.real_data, axis = 1)
+        unaccounted_data = self.real_data-contrib
 
         self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows,:])
 
@@ -113,14 +117,38 @@ class TourismSeries():
 
         self.predicted_data = res+contrib
 
+    def EvaluateSeries(self):
+
+        mase = CalculateMASE(self.predicted_data[:self.train_rows],
+                             self.real_data[:self.train_rows],
+                             self.predicted_data[self.train_rows+1:],
+                             self.real_data[self.train_rows+1:],)
+
+        return mase
 
 
 class TourismModel():
 
-    def __init__(self):
+    def __init__(self, train_times, test_times):
 
         self.series_list = []
         self.linkage_matrix = None
+        self.train_times = train_times
+        self.test_times = test_times
+
+
+    def EvalFromParam(self, linkage_array):
+
+        score = 0
+        for series in self.series_list:
+            score += series.PredictData(series_list,
+                                        linkage_array)
+        return score / len(self.series_list)
+
+
+
+
+
 
 
 
