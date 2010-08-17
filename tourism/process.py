@@ -3,7 +3,7 @@ import csv
 import numpy
 from operator import itemgetter
 from itertools import imap, chain
-from copy import deepcopy, deepcopy
+import pyevolve
 
 
 def nanmean(v1, axis = None):
@@ -109,7 +109,7 @@ class TourismSeries():
 
         other_vals = SeriesList2Mat(series_list)
         contrib = numpy.nansum(other_vals*self.real_data, axis = 1)
-        unaccounted_data = self.real_data-contrib
+        unaccounted_data = numpy.nansum(self.real_data, numpy.hstack((numpy.nan, -contrib[1:])))
 
         self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows,:])
 
@@ -147,7 +147,11 @@ class TourismModel():
 
 
 
-
+    def DoEvolution(self):
+        
+        genome = pyevolve.G1DList.G1DList(len(self.series_list))
+        genome.evaluator.set(self.EvalFromParam)
+        
 
 
 
