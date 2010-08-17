@@ -77,6 +77,56 @@ def PolyFit(t, x, deg = 1):
     return numpy.polyfit(t[v], x[v], use_deg)
 
 
+def SeriesList2Mat(series_list):
+
+    def data_yield(series_list):
+        for series in series_list:
+            for val in series.data:
+                yield val
+
+    mat = numpy.fromiter(data_yield(series_list), numpy.float)
+    mat = numpy.reshape(mat, (-1, len(series_list)))
+
+    return mat
+
+
+
+class TourismSeries():
+
+    def __init__(self, times, data, ID):
+
+        self.times = times
+        self.data = data
+        self.ID = ID
+        self.predicted_data = numpy.ones_like(data)*numpy.nan
+        self.coef = None
+
+    def PredictData(self, series_list, linkage, train_rows = 39):
+
+        other_vals = SeriesList2Mat(series_list)
+        contib = numpy.nansum(other_vals*self.data, axis = 1)
+        unaccounted_data = self.data-contrib
+
+        self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows,:])
+
+        res = numpy.polyval(self.coef,  self.times)
+
+        self.predicted_data = res+contrib
+
+
+
+class TourismModel():
+
+    def __init__(self):
+
+        self.series_list = []
+        self.linkage_matrix = None
+
+
+
+
+
+
 if __name__ == '__main__':
 
 
