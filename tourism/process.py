@@ -3,7 +3,12 @@ import csv
 import numpy
 from operator import itemgetter
 from itertools import imap, chain
-import pyevolve
+from pyevolve import GSimpleGA
+from pyevolve import G1DList
+from pyevolve import Selectors
+from pyevolve import Initializators, Mutators
+
+
 
 
 def nanmean(v1, axis = None):
@@ -82,7 +87,7 @@ def SeriesList2Mat(series_list):
 
     def data_yield(series_list):
         for series in series_list:
-            for val in series.data:
+            for val in series.real_data:
                 yield val
 
     mat = numpy.fromiter(data_yield(series_list), numpy.float)
@@ -108,14 +113,19 @@ class TourismSeries():
         self.train_rows = train_rows
 
         other_vals = SeriesList2Mat(series_list)
-        contrib = numpy.nansum(other_vals*self.real_data, axis = 1)
-        unaccounted_data = numpy.nansum(self.real_data, numpy.hstack((numpy.nan, -contrib[1:])))
+        contrib = numpy.nansum(other_vals * linkage, axis = 1)
 
-        self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows,:])
+        ex = numpy.hstack((0, -contrib[1:]))
+        ex *= ~numpy.isnan(ex)
+
+        unaccounted_data = self.real_data - ex
+
+        self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows])
 
         res = numpy.polyval(self.coef,  self.times)
 
         self.predicted_data = res+contrib
+
 
     def EvaluateSeries(self):
 
@@ -129,31 +139,35 @@ class TourismSeries():
 
 class TourismModel():
 
-    def __init__(self, train_times, test_times):
+    def __init__(self, times, train_nums):
 
         self.series_list = []
         self.linkage_matrix = None
-        self.train_times = train_times
-        self.test_times = test_times
+        self.times = times
+        self.nums = train_nums
 
 
     def EvalFromParam(self, linkage_array):
-
+        link = numpy.fromiter(linkage_array, numpy.float)
         score = 0
         for series in self.series_list:
-            score += series.PredictData(series_list,
-                                        linkage_array)
+            series.PredictData(self.series_list, link,
+                                train_rows = self.nums)
+            score += series.EvaluateSeries()[1]
+        print score
         return score / len(self.series_list)
 
 
 
     def DoEvolution(self):
         
-        genome = pyevolve.G1DList.G1DList(len(self.series_list))
+        genome = G1DList.G1DList(len(self.series_list))
+        genome.initializator.set(Initializators.G1DListInitializatorReal)
+        genome.mutator.set(Mutators.G1DListMutatorRealGaussian)
         genome.setParams(rangemin = -10, rangemax = 10)
         genome.evaluator.set(self.EvalFromParam)
         
-        ga = pyevolve.GSimpleGA.GSimpleGA(genome)
+        ga = GSimpleGA.GSimpleGA(genome)
 
         ga.evolve(freq_stats = 1)
 
@@ -176,38 +190,15 @@ if __name__ == '__main__':
 
     all_data = numpy.reshape(all_data, (-1, len(keys)))
     times = numpy.arange(all_data.shape[0])
-    tnum = 39
+    nums = 39
 
-    train_time = times[0:tnum]
-    train_data = all_data[0:tnum,:]
+    model = TourismModel(times, nums)
+    for col in xrange(len(keys)):
+        model.series_list.append(TourismSeries(times, all_data[:,col],
+                                               keys[col]))
 
-    test_time = times[tnum+1:]
-    test_data = all_data[tnum+1:,:]
+    model.DoEvolution()
 
-    poly_coef = []
-    for col in range(train_data.shape[1]):
-        poly_coef.append(PolyFit(train_time, train_data[:,col]))
-
-    guess_val = []
-    real_val = []
-    train_vals = []
-    test_vals = []
-
-    for col, coef in zip(xrange(test_data.shape[1]), poly_coef):
-
-        train_guess = numpy.polyval(coef, train_time)
-        test_guess = numpy.polyval(coef, test_time)
-
-        train_nval, test_nval = CalculateMASE(train_guess, train_data[:,col],
-                                              test_guess, test_data[:,col])
-
-        print train_nval, test_nval
-        train_vals.append(train_nval)
-        test_vals.append(test_nval)
-    train_vals = numpy.fromiter(train_vals, numpy.float)
-    test_vals = numpy.fromiter(test_vals, numpy.float)
-
-    print test_vals.mean()
 
 
 
