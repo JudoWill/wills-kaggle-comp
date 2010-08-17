@@ -150,8 +150,14 @@ class TourismModel():
     def DoEvolution(self):
         
         genome = pyevolve.G1DList.G1DList(len(self.series_list))
+        genome.setParams(rangemin = -10, rangemax = 10)
         genome.evaluator.set(self.EvalFromParam)
         
+        ga = pyevolve.GSimpleGA.GSimpleGA(genome)
+
+        ga.evolve(freq_stats = 1)
+
+        self.linkage_matrix = ga.bestIndividual()
 
 
 
