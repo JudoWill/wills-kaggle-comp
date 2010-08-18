@@ -163,6 +163,32 @@ class TourismModel():
         return score / len(self.series_list)
 
 
+    def ForceLinkages(self, current_linkage, source, target, train_rows = 39):
+
+        srows = self.series_list[source].real_data
+        trows = self.series_list[target].real_data
+        times = self.times
+
+        coef =  PolyFit(times[:train_rows], trows[:train_rows])
+
+        pred_vals = numpy.polyval(coef, times[:train_rows])
+        diffs = trows[:train_rows] - pred_vals
+        base = srows[1:train_rows+1]
+        print diffs.shape, base.shape
+        fracs = diffs/base
+        print 'diffs', diffs
+        print 'fracs', fracs
+
+        v = numpy.median(fracs[~numpy.isnan(fracs)])
+        print 'v', v
+        current_linkage[source, target] = v
+        return current_linkage 
+
+
+
+
+
+
 
     def DoEvolution(self):
 
@@ -206,7 +232,13 @@ if __name__ == '__main__':
         model.series_list.append(TourismSeries(times, all_data[:,col],
                                                keys[col]))
 
-    model.DoEvolution()
+    link = numpy.zeros((len(keys), len(keys)))
+    model.ForceLinkages(link, 47, 99)
+
+
+
+
+    #model.DoEvolution()
 
 
 
