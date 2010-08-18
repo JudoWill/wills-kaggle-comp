@@ -108,17 +108,18 @@ class TourismSeries():
         self.coef = None
         self.train_rows = None
 
-    def PredictData(self, series_list, linkage, train_rows = 39):
+    def PredictData(self, other_vals, linkage, train_rows = 39):
 
+        
         self.train_rows = train_rows
 
-        other_vals = SeriesList2Mat(series_list)
         contrib = numpy.nansum(other_vals * linkage, axis = 1)
 
         ex = numpy.hstack((0, -contrib[1:]))
         ex *= ~numpy.isnan(ex)
 
         unaccounted_data = self.real_data - ex
+        print unaccounted_data
 
         self.coef = PolyFit(self.times[:train_rows], unaccounted_data[:train_rows])
 
@@ -142,29 +143,37 @@ class TourismModel():
     def __init__(self, times, train_nums):
 
         self.series_list = []
+        self.series_mat = None
+        self.contrib = None
         self.linkage_matrix = None
         self.times = times
         self.nums = train_nums
 
 
     def EvalFromParam(self, linkage_array):
-        link = numpy.fromiter(linkage_array, numpy.float)
+        link = numpy.fromiter(linkage_array,
+                              numpy.float).reshape((len(self.series_list),
+                                                    len(self.series_list)))
         score = 0
-        for series in self.series_list:
-            series.PredictData(self.series_list, link,
+        for col, series in zip(range(len(self.series_list)), self.series_list):
+            series.PredictData(self.series_mat, link[:, col],
                                 train_rows = self.nums)
             score += series.EvaluateSeries()[1]
-        print score
+        print score / len(self.series_list)
         return score / len(self.series_list)
 
 
 
     def DoEvolution(self):
-        
-        genome = G1DList.G1DList(len(self.series_list))
+
+        self.series_mat = SeriesList2Mat(self.series_list)
+
+
+        genome = G1DList.G1DList(len(self.series_list)**2)
         genome.initializator.set(Initializators.G1DListInitializatorReal)
         genome.mutator.set(Mutators.G1DListMutatorRealGaussian)
-        genome.setParams(rangemin = -10, rangemax = 10)
+        genome.setParams(rangemin = -1, rangemax = 1,
+                         gauss_mu = 0, gauss_sigma = 0.00001 )
         genome.evaluator.set(self.EvalFromParam)
         
         ga = GSimpleGA.GSimpleGA(genome)
